@@ -5,6 +5,10 @@ from model.style_transfer import StyleTransformer
 from data.dataset import ImageDataset
 from itertools import count
 from utils import *
+import argparse
+# import matplotlib
+# matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 
 class Trainer(object):
@@ -29,6 +33,8 @@ class Trainer(object):
         self.style_weight = style_weight
         self.show_result_every = show_result_every
         self.max_iteration = max_iteration
+        self.content_loss = []
+        self.style_loss = []
 
     def adjust_learning_rate(self, iteration_count):
         """Imitating the original implementation"""
@@ -53,18 +59,37 @@ class Trainer(object):
             loss_c, loss_s = self.model(content, style, return_loss=True)
             loss = self.content_weight * loss_c + self.style_weight * loss_s
             loss.backward()
+            self.content_loss.append(loss_c.item())
+            self.style_loss.append(loss_s.item())
             self.optim.step()
             print(f'\rIteration: {iteration} | Content Loss: {loss_c.item()} | Style Loss: {loss_s.item()}',
                   file=sys.stdout, flush=True, end='')
             self.adjust_learning_rate(iteration)
             if not iteration % self.show_result_every:
-                self.show()
+                 self.show()
             if iteration == self.max_iteration:
+                plt.plot(self.content_loss)
+                plt.title('Content Loss')
+                plt.savefig('content_loss.jpg')
+                plt.plot(self.style_loss)
+                plt.title('Style Loss')
+                plt.savefig('style_loss.jpg')
                 break
 
 
 if __name__ == '__main__':
-    trainer = Trainer(data_root=r'F:\datasets\Miyazaki Hayao2photo',
-                      lr=1e-4, lr_decay=5e-5, content_weight=10,
-                      style_weight=1e-1, show_result_every=50, max_iteration=20000)
+    args = argparse.ArgumentParser('Args')
+    args.add_argument('--data_root', type=str, default=r'F:\datasets\cartoonization')
+    args.add_argument('--lr', type=float, default=1e-4)
+    args.add_argument('--lr_decay', type=float, default=5e-5)
+    args.add_argument('--content_weight', '-cw', type=float, default=1)
+    args.add_argument('--style_weight', '-sw', type=float, default=1e-2)
+    args.add_argument('--max_iteration', '-mi', type=int, default=100000)
+    args.add_argument('--save_path', '-sp', type=str, default='trained_model/model.pkl')
+    args, _ = args.parse_known_args()
+    trainer = Trainer(data_root=args.data_root,
+                      lr=args.lr, lr_decay=args.lr_decay, content_weight=args.content_weight,
+                      style_weight=args.style_weight, show_result_every=100,
+                      max_iteration=args.max_iteration)
     trainer.train()
+    torch.save(trainer.model.state_dict(), args.save_path)
