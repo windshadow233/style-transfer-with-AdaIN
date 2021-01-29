@@ -7,15 +7,16 @@ import numpy as np
 
 
 class ImageDataset(object):
-    def __init__(self, root=r'F:\datasets\Miyazaki Hayao2photo', transform=None):
+    def __init__(self, root=r'F:\datasets\Miyazaki Hayao2photo', transform=None, mode='train'):
         self.root = root
+        self.mode = mode
         self.load_data('A')
         self.load_data('B')
         self.transform = transform
 
     def load_data(self, img_type):
         attr = {'A': 'style', 'B': 'content'}[img_type] + '_images'
-        self.__setattr__(attr, glob.glob(os.path.join(self.root, 'train' + img_type, '*')))
+        self.__setattr__(attr, glob.glob(os.path.join(self.root, self.mode + img_type, '*')))
         random.shuffle(self.__getattribute__(attr))
 
     def __call__(self, batch_size):
