@@ -3,6 +3,10 @@ from PIL import Image
 import torchvision
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+import random
+from model.style_transfer import StyleTransformer
+from data.dataset import ImageDataset
 
 
 def visualize(imgs, results):
@@ -29,8 +33,23 @@ transform = torchvision.transforms.ToTensor()
 @torch.no_grad()
 def test_image(model, content_img_path, style_img_path):
     content = Image.open(content_img_path).convert('RGB')
-    style = Image.open(style_img_path).convert('RGB')
+    style = Image.open(os.path.join(style_img_path, style_img_path)).convert('RGB')
     content = transform(content)[None].cuda()
     style = transform(style)[None].cuda()
     result = model(content, style).cpu()
+    imshow(content.cpu().squeeze())
     imshow(denorm(result.squeeze()))
+
+
+@torch.no_grad()
+def show(model, dataset, samples_num=4):
+    content, style = dataset(samples_num)
+    content, style = content.cuda(), style.cuda()
+    result = model(content, style, return_loss=False)
+    visualize(content, result)
+
+
+model = StyleTransformer()
+model.load_state_dict(torch.load('trained_model/model2.pkl'))
+model.cuda().eval()
+dataset = ImageDataset(r'F:\datasets\Miyazaki Hayao2photo', transform, 'test')
